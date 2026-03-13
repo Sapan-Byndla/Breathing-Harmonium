@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Breathing Harmonium</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1a2a6c, #000);
+      color: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .container {
+      text-align: center;
+      max-width: 480px;
+      width: 90%;
+    }
+
+    h1 {
+      margin-bottom: 0.25rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 1rem;
+      color: #9fa8da;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-weight: 500;
+      font-size: 1.5rem;
+    }
+
+    .status {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      opacity: 0.85;
+    }
+
+    .bellows {
+      margin: 2rem auto 1rem;
+      width: 260px;
+      height: 120px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #263238, #455a64);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+      transform-origin: center;
+      transition: transform 80ms ease-out;
+    }
+
+    .bellows-inner {
+      position: absolute;
+      inset: 10px;
+      border-radius: 12px;
+      background: repeating-linear-gradient(
+        45deg,
+        #546e7a,
+        #546e7a 6px,
+        #37474f 6px,
+        #37474f 12px
+      );
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .breath-bar {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      margin-top: 1rem;
+    }
+
+    .breath-bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ff9800, #ff5722);
+      transition: width 80ms ease-out;
+    }
+
+    .value {
+      margin-top: 0.5rem;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.95rem;
+      color: #c5cae9;
+    }
+
+    .keys {
+      margin: 1.75rem auto 0.25rem;
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .piano {
+      position: relative;
+      height: 120px;
+      padding: 8px;
+      border-radius: 14px;
+      background: rgba(0, 0, 0, 0.35);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65);
+    }
+
+    .white-keys {
+      display: flex;
+      height: 100%;
+      gap: 2px;
+    }
+
+    .key {
+      position: relative;
+      border: none;
+      cursor: pointer;
+      font-size: 0.7rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 6px;
+      transition: transform 60ms ease-out, box-shadow 60ms ease-out,
+        background 80ms ease-out;
+    }
+
+    .key-white {
+      flex: 1;
+      background: linear-gradient(to bottom, #fafafa, #d6d7dd);
+      color: #333;
+      border-radius: 6px;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5);
+    }
+
+    .key-white.active {
+      background: linear-gradient(to bottom, #ffe0b2, #ffb74d);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+      transform: translateY(2px);
+    }
+
+    .black-keys {
+      position: absolute;
+      inset: 8px 8px 24px 8px;
+      display: flex;
+      pointer-events: none;
+    }
+
+    .spacer {
+      flex: 1;
+    }
+
+    .key-black {
+      width: 65%;
+      margin: 0 auto;
+      background: linear-gradient(to bottom, #212121, #000);
+      color: #e8eaf6;
+      border-radius: 4px 4px 10px 10px;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.75);
+      pointer-events: auto;
+      z-index: 2;
+    }
+
+    .key-black.active {
+      background: linear-gradient(to bottom, #ff8a65, #e64a19);
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.8);
+      transform: translateY(2px);
+    }
+
+    .hint {
+      margin-top: 0.75rem;
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Breathing Harmonium</h1>
+    <h2>Bellows Visualizer</h2>
+    <div class="status" id="status">Connecting to backend…</div>
+
+    <div class="bellows" id="bellows">
+      <div class="bellows-inner"></div>
+    </div>
+
+    <div class="breath-bar">
+      <div class="breath-bar-fill" id="breathFill"></div>
+    </div>
+    <div class="value">
+      Breath intensity: <span id="breathValue">0.00</span>
+    </div>
+
+    <div class="keys">
+      <div class="piano">
+        <div class="white-keys">
+          <button class="key key-white" data-note="C4" data-key="shift">C</button>
+          <button class="key key-white" data-note="D4" data-key="z">D</button>
+          <button class="key key-white" data-note="E4" data-key="c">E</button>
+          <button class="key key-white" data-note="F4" data-key="v">F</button>
+          <button class="key key-white" data-note="G4" data-key="n">G</button>
+          <button class="key key-white" data-note="A4" data-key=",">A</button>
+          <button class="key key-white" data-note="B4" data-key="/">B</button>
+        </div>
+        <div class="black-keys">
+          <div class="spacer">
+            <button class="key key-black" data-note="C#4" data-key="`">C#</button>
+          </div>
+          <div class="spacer">
+            <button class="key key-black" data-note="D#4" data-key="x">D#</button>
+          </div>
+          <div class="spacer"></div>
+          <div class="spacer">
+            <button class="key key-black" data-note="F#4" data-key="b">F#</button>
+          </div>
+          <div class="spacer">
+            <button class="key key-black" data-note="G#4" data-key="m">G#</button>
+          </div>
+          <div class="spacer">
+            <button class="key key-black" data-note="A#4" data-key=".">A#</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="hint">
+      Click or press keys (e.g. C / V / X…) to select notes. Breath controls volume.
+    </div>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const bellowsEl = document.getElementById("bellows");
+    const breathFillEl = document.getElementById("breathFill");
+    const breathValueEl = document.getElementById("breathValue");
+
+    const keyButtons = Array.from(document.querySelectorAll(".key"));
+
+    // --- Web Audio setup for a simple harmonium-like tone ---
+    let audioCtx = null;
+    let masterGain = null;
+    // activeNotes[note] = array of oscillators for that note
+    let activeNotes = {};
+    let latestBreath = 0;
+
+    const NOTE_FREQUENCIES = {
+      C4: 261.63,
+      "C#4": 277.18,
+      D4: 293.66,
+      "D#4": 311.13,
+      E4: 329.63,
+      F4: 349.23,
+      "F#4": 369.99,
+      G4: 392.0,
+      "G#4": 415.3,
+      A4: 440.0,
+      "A#4": 466.16,
+      B4: 493.88,
+    };
+
+    function ensureAudioContextStarted() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 0;
+        masterGain.connect(audioCtx.destination);
+      } else if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+    }
+
+    function startNoteOscillators(note) {
+      ensureAudioContextStarted();
+      const baseFreq = NOTE_FREQUENCIES[note];
+      if (!baseFreq || !audioCtx) return;
+
+      // A small stack of detuned saw/pulse-like oscillators to mimic reeds
+      const freqs = [baseFreq * 0.5, baseFreq, baseFreq * 2];
+      const detunes = [-4, 0, 3];
+      const oscillators = [];
+
+      freqs.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        osc.type = "sawtooth";
+        osc.frequency.value = f;
+        osc.detune.value = detunes[i] || 0;
+
+        // Gentle low-pass to soften the tone
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = "lowpass";
+        filter.frequency.value = 2200;
+        filter.Q.value = 0.8;
+
+        // Per-oscillator gain so we can balance levels
+        const oscGain = audioCtx.createGain();
+        oscGain.gain.value = i === 1 ? 0.6 : 0.3;
+
+        osc.connect(filter);
+        filter.connect(oscGain);
+        oscGain.connect(masterGain);
+
+        osc.start();
+        oscillators.push(osc);
+      });
+
+      activeNotes[note] = oscillators;
+    }
+
+    function stopNoteOscillators(note) {
+      const oscs = activeNotes[note];
+      if (!oscs) return;
+      oscs.forEach((osc) => {
+        try {
+          osc.stop();
+        } catch (e) {}
+      });
+      delete activeNotes[note];
+    }
+
+    // Update master gain based on breath intensity
+    function updateVolumeFromBreath(clampedBreath) {
+      if (!masterGain || !audioCtx) return;
+
+      const t = audioCtx.currentTime;
+      const targetGain = clampedBreath; // simple mapping; can be curved later
+      masterGain.gain.cancelScheduledValues(t);
+      masterGain.gain.setTargetAtTime(targetGain, t, 0.06); // smooth attack/release
+    }
+
+    keyButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const note = btn.dataset.note;
+        const isActive = !!activeNotes[note];
+        if (isActive) {
+          stopNoteOscillators(note);
+          btn.classList.remove("active");
+        } else {
+          startNoteOscillators(note);
+          btn.classList.add("active");
+        }
+      });
+    });
+
+    const pressedKeys = new Set();
+    const KEY_TO_NOTE = {};
+    keyButtons.forEach((btn) => {
+      const key = btn.dataset.key;
+      const note = btn.dataset.note;
+      if (key && note) {
+        KEY_TO_NOTE[key.toLowerCase()] = note;
+      }
+    });
+
+    window.addEventListener("keydown", (event) => {
+      const key = event.key.toLowerCase();
+      if (event.repeat) return;
+      const note = KEY_TO_NOTE[key];
+      if (!note) return;
+      event.preventDefault();
+      if (pressedKeys.has(key)) return;
+      pressedKeys.add(key);
+      if (!activeNotes[note]) {
+        startNoteOscillators(note);
+        const btn = keyButtons.find((b) => b.dataset.note === note);
+        if (btn) btn.classList.add("active");
+      }
+    });
+
+    window.addEventListener("keyup", (event) => {
+      const key = event.key.toLowerCase();
+      const note = KEY_TO_NOTE[key];
+      if (!note) return;
+      pressedKeys.delete(key);
+      stopNoteOscillators(note);
+      const btn = keyButtons.find((b) => b.dataset.note === note);
+      if (btn) btn.classList.remove("active");
+    });
+
+    function connect() {
+      const ws = new WebSocket("ws://localhost:8000");
+
+      ws.addEventListener("open", () => {
+        statusEl.textContent = "Connected. Breathe into your mic…";
+      });
+
+      ws.addEventListener("message", (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const raw = typeof data.breath === "number" ? data.breath : 0;
+
+          latestBreath = raw;
+
+          // Map raw intensity into a nice 0–1 range with soft limiting
+          const normalized = Math.tanh(raw / 3); // tweak denominator for sensitivity
+          const clamped = Math.max(0, Math.min(1, normalized));
+
+          const percent = (clamped * 100).toFixed(0);
+          breathFillEl.style.width = percent + "%";
+          breathValueEl.textContent = raw.toFixed(2);
+
+          // Scale bellows slightly based on breath intensity
+          const scale = 1 + clamped * 0.25;
+          bellowsEl.style.transform = `scale(${scale})`;
+
+          // If any notes are active, use breath to control volume
+          if (Object.keys(activeNotes).length > 0) {
+            ensureAudioContextStarted();
+            updateVolumeFromBreath(clamped);
+          } else {
+            updateVolumeFromBreath(0);
+          }
+        } catch (e) {
+          console.error("Error parsing message", e);
+        }
+      });
+
+      ws.addEventListener("close", () => {
+        statusEl.textContent = "Disconnected. Retrying in 1s…";
+        setTimeout(connect, 1000);
+      });
+
+      ws.addEventListener("error", () => {
+        statusEl.textContent = "Connection error. Retrying in 1s…";
+        ws.close();
+      });
+    }
+
+    connect();
+  </script>
+</body>
+</html>
+
+
